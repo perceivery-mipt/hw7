@@ -1,0 +1,115 @@
+# докер образ питона
+image: python:3.11-slim
+
+# сначала проверяем воспроизводимость окружения, затем запускаем сам пайплайн
+stages:
+  - reproducibility_check
+  - test
+
+# переменные окружения для пайплайна
+variables:
+  # кэш pip хранится внутри директории проекта GitLab CI
+  # для ускорения запуска подойдет
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+  # чтобы логи сразу появлялись в CI
+  PYTHONUNBUFFERED: "1"
+
+# кэшируем загруженные Python-пакеты между запусками
+cache:
+  paths:
+    - .cache/pip
+
+# первый job - проверка воспроизводимости проекта
+make_pipeline_reproducible:
+  stage: reproducibility_check
+
+  # команды подготовки окружения перед основной проверкой
+  before_script:
+    # вывод версии в лог
+    - python --version
+
+    # обновляем pip до актуального
+    - python -m pip install --upgrade pip
+
+    # создаем директории для логов и отчетов
+    - mkdir -p logs reports
+
+  script:
+    # создаем основной отчет о проверке воспроизводимости
+    - echo "CI reproducibility check started" | tee reports/pipeline_report.txt
+
+    # проверяем наличие обязательных файлов 
+    - echo "Checking required project files..." | tee -a reports/pipeline_report.txt
+    - test -f requirements.txt
+    - test -f ml_pipeline.py
+
+    # фиксируем в отчете чтоо файлы найдены
+    - echo "Required files found: requirements.txt, ml_pipeline.py" | tee -a reports/pipeline_report.txt
+
+    # устанавливаем зависимости из requirements
+    - echo "Installing dependencies..." | tee -a reports/pipeline_report.txt
+    - pip install -r requirements.txt
+
+    # проверяем что библиотеки импортируются
+    - echo "Checking imported dependencies..." | tee -a reports/pipeline_report.txt
+    - python -c "import sklearn, numpy, pandas; print('Required ML dependencies are available')" | tee logs/dependency_check.log
+
+    # сохраняем информацию об окружении
+    - echo "Saving environment information..." | tee -a reports/pipeline_report.txt
+    - python --version > reports/environment.txt
+    - pip freeze >> reports/environment.txt
+
+  # сохраняем артефакты первого этапа
+  # их кстати можно скачать из GitLab после выполнения пайплайнв
+  artifacts:
+    when: always
+    paths:
+      - reports/pipeline_report.txt
+      - reports/environment.txt
+      - logs/dependency_check.log
+      - requirements.txt
+      - ml_pipeline.py
+    expire_in: 1 week
+
+# второй job - запуск самого ML-пайплайна
+run_ml_pipeline:
+  stage: test
+
+  # подготовка окружения для запуска модели
+  before_script:
+    - python --version
+
+    - python -m pip install --upgrade pip
+
+    - pip install -r requirements.txt
+
+    - mkdir -p logs reports
+
+  script:
+    # создаем отчет о запуске ML-пайплайна
+    - echo "Running ML pipeline..." | tee reports/test_report.txt
+
+    # запускаем ML-пайплайн
+    # вывод одновременно идет в консоль GitLab и сохраняется в лог-файл
+    - python ml_pipeline.py | tee logs/ml_pipeline.log
+
+    # сохраняем лог с accuracy как отдельный файл метрик
+    - cp logs/ml_pipeline.log reports/metrics.txt
+
+    # проверяем что файл с метриками создался
+    - test -f reports/metrics.txt
+
+    # фиксируем успешное завершение пайплайна
+    - echo "ML pipeline completed successfully" | tee -a reports/test_report.txt
+
+  # отчет, метрики, лог запуска, зависимости и код пайплайна
+  artifacts:
+    when: always
+    paths:
+      - reports/test_report.txt
+      - reports/metrics.txt
+      - logs/ml_pipeline.log
+      - requirements.txt
+      - ml_pipeline.py
+    expire_in: 1 week
