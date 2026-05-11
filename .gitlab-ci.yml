@@ -36,29 +36,24 @@ make_pipeline_reproducible:
     - mkdir -p logs reports
 
   script:
-    # создаем основной отчет о проверке воспроизводимости
-    - 'echo "CI reproducibility check started" | tee reports/pipeline_report.txt'
+    - |
+      echo "CI reproducibility check started" | tee reports/pipeline_report.txt
 
-    # проверяем наличие обязательных файлов
-    - 'echo "Checking required project files" | tee -a reports/pipeline_report.txt'
-    - test -f requirements.txt
-    - test -f ml_pipeline.py
+      echo "Checking required project files" | tee -a reports/pipeline_report.txt
+      test -f requirements.txt
+      test -f ml_pipeline.py
 
-    # фиксируем в отчете что файлы найдены
-    - 'echo "Required files found - requirements.txt and ml_pipeline.py" | tee -a reports/pipeline_report.txt'
+      echo "Required files found - requirements.txt and ml_pipeline.py" | tee -a reports/pipeline_report.txt
 
-    # устанавливаем зависимости из requirements
-    - 'echo "Installing dependencies from requirements.txt" | tee -a reports/pipeline_report.txt'
-    - pip install -r requirements.txt
+      echo "Installing dependencies from requirements.txt" | tee -a reports/pipeline_report.txt
+      pip install -r requirements.txt
 
-    # проверяем что библиотеки импортируются
-    - 'echo "Checking imported dependencies" | tee -a reports/pipeline_report.txt'
-    - 'python -c "import sklearn, numpy, pandas; print(\"Required ML dependencies are available\")" | tee logs/dependency_check.log'
+      echo "Checking imported dependencies" | tee -a reports/pipeline_report.txt
+      python -c "import sklearn, numpy, pandas; print('Required ML dependencies are available')" | tee logs/dependency_check.log
 
-    # сохраняем информацию об окружении
-    - 'echo "Saving environment information" | tee -a reports/pipeline_report.txt'
-    - python --version > reports/environment.txt
-    - pip freeze >> reports/environment.txt
+      echo "Saving environment information" | tee -a reports/pipeline_report.txt
+      python --version > reports/environment.txt
+      pip freeze >> reports/environment.txt
 
   # сохраняем артефакты первого этапа
   # их кстати можно скачать из GitLab после выполнения пайплайна
@@ -87,21 +82,16 @@ run_ml_pipeline:
     - mkdir -p logs reports
 
   script:
-    # создаем отчет о запуске ML-пайплайна
-    - 'echo "Running ML pipeline" | tee reports/test_report.txt'
+    - |
+      echo "Running ML pipeline" | tee reports/test_report.txt
 
-    # запускаем ML-пайплайн
-    # вывод одновременно идет в консоль GitLab и сохраняется в лог-файл
-    - python ml_pipeline.py | tee logs/ml_pipeline.log
+      python ml_pipeline.py | tee logs/ml_pipeline.log
 
-    # сохраняем лог с accuracy как отдельный файл метрик
-    - cp logs/ml_pipeline.log reports/metrics.txt
+      cp logs/ml_pipeline.log reports/metrics.txt
 
-    # проверяем что файл с метриками создался
-    - test -f reports/metrics.txt
+      test -f reports/metrics.txt
 
-    # фиксируем успешное завершение пайплайна
-    - 'echo "ML pipeline completed successfully" | tee -a reports/test_report.txt'
+      echo "ML pipeline completed successfully" | tee -a reports/test_report.txt
 
   # отчет, метрики, лог запуска, зависимости и код пайплайна
   artifacts:
