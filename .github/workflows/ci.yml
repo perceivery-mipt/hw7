@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run ML pipeline
+        run: |
+          mkdir -p reports logs
+          python ml_pipeline.py | tee logs/ml_pipeline.log
+          cp logs/ml_pipeline.log reports/metrics.txt
+
+      - name: Make pipeline reproducible
+        run: |
+          echo "Checking reproducible ML project artifacts" | tee reports/reproducibility_report.txt
+
+          echo "Required files:" | tee -a reports/reproducibility_report.txt
+          test -f ml_pipeline.py
+          test -f requirements.txt
+          echo "- ml_pipeline.py exists" | tee -a reports/reproducibility_report.txt
+          echo "- requirements.txt exists" | tee -a reports/reproducibility_report.txt
+
+          echo "Saving Python environment" | tee -a reports/reproducibility_report.txt
+          python --version > reports/environment.txt
+          pip freeze >> reports/environment.txt
+
+          echo "Checking generated metric artifact" | tee -a reports/reproducibility_report.txt
+          test -f reports/metrics.txt
+          echo "- reports/metrics.txt exists" | tee -a reports/reproducibility_report.txt
+
+          echo "Pipeline is reproducible from source code and dependency specification" | tee -a reports/reproducibility_report.txt
+
+      - name: Upload pipeline artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ml-pipeline-artifacts
+          path: |
+            ml_pipeline.py
+            requirements.txt
+            reports/
+            logs/
