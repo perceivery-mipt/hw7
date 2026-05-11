@@ -1,93 +1,98 @@
-# perceivery-mipt-ml
+# HW7. CI/CD для ML-сервиса и безопасное развертывание модели
 
+## Описание проекта
 
+Проект выполнен в рамках модуля 7 «Автоматизированное развертывание с помощью CI/CD».
 
-## Getting started
+Цель работы — собрать воспроизводимый CI/CD-пайплайн для ML-проекта, реализовать безопасную стратегию развертывания модели и проверить работу сервиса локально и в CI-среде.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+В проекте используется учебная ML-задача классификации датасета Iris. Базовый пайплайн `ml_pipeline.py` обучает модель `RandomForestClassifier`, считает метрику accuracy и используется для проверки воспроизводимости в CI/CD.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+Для демонстрации развертывания реализован минимальный FastAPI ML-сервис `app.py`, построенный на той же логике: модель обучается на Iris, сервис возвращает статус, метрики и предсказание класса Iris по четырем признакам.
 
-## Add your files
+## Репозитории
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+GitLab:
 
-```
-cd existing_repo
-git remote add origin https://gitlab.com/perceivery-mipt/hw7.git
-git branch -M main
-git push -uf origin main
+```text
+https://gitlab.com/perceivery-mipt/hw7
 ```
 
-## Integrate with your tools
+GitHub:
 
-* [Set up project integrations](https://gitlab.com/perceivery-mipt/hw7/-/settings/integrations)
+```text
+https://github.com/perceivery-mipt/hw7
+```
 
-## Collaborate with your team
+## Структура проекта
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+Проект организован так, чтобы отдельно хранить код ML-пайплайна, код сервиса, конфигурации CI/CD, файлы развертывания, ADR-документы и скриншоты проверок.
 
-## Test and Deploy
+```text
+.
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── deploy.yml
+├── doc/
+│   └── architecture/
+│       └── decisions/
+│           ├── 0001-record-architecture-decisions.md
+│           └── 0002-use-canary-deployment-for-ml-service.md
+├── docs/
+│   └── screenshots/
+├── nginx/
+│   ├── nginx.active.conf
+│   ├── nginx-canary-90-10.conf
+│   ├── nginx-canary-50-50.conf
+│   ├── nginx-canary-100.conf
+│   └── nginx-rollback.conf
+├── notebooks/
+│   └── HW7_CICD_Freydina_Alena_1.ipynb
+├── scripts/
+│   ├── check_service.sh
+│   ├── rollback_to_stable.sh
+│   ├── switch_to_50_50.sh
+│   └── switch_to_100_canary.sh
+├── .adr-dir
+├── .gitignore
+├── .gitlab-ci.yml
+├── app.py
+├── docker-compose.canary.yml
+├── Dockerfile
+├── ml_pipeline.py
+├── README.md
+└── requirements.txt
+```
 
-Use the built-in continuous integration in GitLab.
+### Описание файлов и директорий
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+| Файл / директория | Назначение |
+|---|---|
+| `.github/workflows/ci.yml` | GitHub Actions workflow для проверки воспроизводимости ML-пайплайна. Устанавливает Python, ставит зависимости из `requirements.txt`, запускает `ml_pipeline.py`, сохраняет логи, метрики и артефакты выполнения. |
+| `.github/workflows/deploy.yml` | Альтернативное имя workflow-файла, соответствующее формулировке задания. В GitHub Actions имя файла может быть любым, если он лежит в `.github/workflows/`, но в задании явно указан `deploy.yml`, поэтому файл добавлен для формального соответствия требованиям. |
+| `.gitlab-ci.yml` | GitLab CI/CD pipeline. Проверяет воспроизводимость проекта, устанавливает зависимости, запускает `ml_pipeline.py`, сохраняет отчеты, логи и метрики как artifacts. |
+| `ml_pipeline.py` | Offline ML-пайплайн. Загружает датасет Iris, обучает `RandomForestClassifier`, считает accuracy и выводит результат. Используется в GitLab CI/CD и GitHub Actions для проверки воспроизводимого запуска модели. |
+| `app.py` | FastAPI ML-сервис, построенный на той же логике, что и `ml_pipeline.py`. Поддерживает endpoint’ы `/health`, `/metrics` и `/predict`. Используется для демонстрации деплоя двух версий модели. |
+| `requirements.txt` | Минимальный список зависимостей проекта. Включает библиотеки для ML-пайплайна и FastAPI-сервиса: `numpy`, `pandas`, `scikit-learn`, `fastapi`, `uvicorn`, `pydantic`. |
+| `Dockerfile` | Инструкция для сборки Docker-образа ML-сервиса. Использует минимальный образ `python:3.11-slim`, устанавливает зависимости и запускает FastAPI через `uvicorn`. |
+| `docker-compose.canary.yml` | Docker Compose-конфигурация для Canary Deployment. Поднимает три контейнера: `stable` с версией `v1.0.0`, `canary` с версией `v1.1.0` и `nginx` как балансировщик трафика. |
+| `nginx/nginx.active.conf` | Активная конфигурация Nginx, которая монтируется внутрь контейнера балансировщика. Именно этот файл определяет текущее распределение трафика. |
+| `nginx/nginx-canary-90-10.conf` | Начальная Canary-конфигурация: примерно 90% запросов направляются на стабильную версию `v1.0.0`, а 10% — на новую версию `v1.1.0`. |
+| `nginx/nginx-canary-50-50.conf` | Промежуточная Canary-конфигурация: трафик распределяется между стабильной и новой версией примерно поровну. |
+| `nginx/nginx-canary-100.conf` | Конфигурация полного переключения: весь трафик направляется на новую версию `v1.1.0`. |
+| `nginx/nginx-rollback.conf` | Конфигурация отката: весь трафик возвращается на стабильную версию `v1.0.0`. |
+| `scripts/check_service.sh` | Скрипт проверки сервиса. Выполняет запросы к `/health`, `/metrics` и `/predict`, чтобы убедиться, что ML-сервис работает корректно. |
+| `scripts/switch_to_50_50.sh` | Скрипт переключения Nginx на режим Canary `50/50`. Копирует нужную конфигурацию в `nginx.active.conf` и перезапускает контейнер Nginx. |
+| `scripts/switch_to_100_canary.sh` | Скрипт полного переключения на canary-версию `v1.1.0`. |
+| `scripts/rollback_to_stable.sh` | Скрипт rollback. Возвращает весь трафик на стабильную версию `v1.0.0`. |
+| `doc/architecture/decisions/` | Директория с ADR-документами. Используется для фиксации архитектурных решений проекта. |
+| `doc/architecture/decisions/0001-record-architecture-decisions.md` | Первый ADR, созданный при инициализации `adr-tools`. Фиксирует решение использовать Architecture Decision Records. |
+| `doc/architecture/decisions/0002-use-canary-deployment-for-ml-service.md` | Основной ADR проекта. В нем сравниваются Blue-Green и Canary Deployment, обосновывается выбор Canary Deployment и описываются риски выбранной стратегии. |
+| `.adr-dir` | Служебный файл `adr-tools`, в котором хранится путь к директории ADR-документов. |
+| `docs/screenshots/` | Директория со скриншотами проверок: успешный GitLab pipeline, запуск Docker Compose, работа endpoint’ов, Canary 90/10, 50/50, 100%, rollback и успешный GitHub Actions workflow. |
+| `notebooks/HW7_CICD_Freydina_Alena_1.ipynb` | Итоговый ноутбук с выполнением домашнего задания, выводами, скриншотами и результатами проверок. |
+| `.gitignore` | Исключает из Git служебные файлы Colab, Python-кэш, временные файлы, локальные директории и скачанный инструмент `adr-tools`. |
+| `README.md` | Основная документация проекта: описание пайплайна, стратегии деплоя, запуска сервиса, A/B-теста, ADR и CI/CD. |
 
-***
 
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
