@@ -48,7 +48,7 @@ https://github.com/perceivery-mipt/hw7
 │   ├── nginx-canary-100.conf
 │   └── nginx-rollback.conf
 ├── notebooks/
-│   └── HW7_CICD_Freydina_Alena_1.ipynb
+│   └── HW7_CICD_Freydina_Alena_2.ipynb
 ├── scripts/
 │   ├── check_service.sh
 │   ├── rollback_to_stable.sh
@@ -69,8 +69,8 @@ https://github.com/perceivery-mipt/hw7
 
 | Файл / директория | Назначение |
 |---|---|
-| `.github/workflows/ci.yml` | GitHub Actions workflow для проверки воспроизводимости ML-пайплайна. Устанавливает Python, ставит зависимости из `requirements.txt`, запускает `ml_pipeline.py`, сохраняет логи, метрики и артефакты выполнения. |
-| `.github/workflows/deploy.yml` | Альтернативное имя workflow-файла, соответствующее формулировке задания. В GitHub Actions имя файла может быть любым, если он лежит в `.github/workflows/`, но в задании явно указан `deploy.yml`, поэтому файл добавлен для формального соответствия требованиям. |
+| `.github/workflows/ci.yml` | GitHub Actions workflow для проверки воспроизводимости offline ML-пайплайна. Устанавливает Python, ставит зависимости из `requirements.txt`, запускает `ml_pipeline.py`, сохраняет логи, метрики и артефакты выполнения. |
+| `.github/workflows/deploy.yml` | GitHub Actions workflow для deployment-проверки ML-сервиса. Собирает Docker-образ из `Dockerfile`, запускает контейнер внутри GitHub Actions, проверяет endpoint’ы `/health`, `/metrics` и `/predict`, логинится в GitHub Container Registry и публикует образ. Шаг `Deploy via API` оставлен как безопасная заглушка, так как реальный cloud provider endpoint в проекте не используется. |
 | `.gitlab-ci.yml` | GitLab CI/CD pipeline. Проверяет воспроизводимость проекта, устанавливает зависимости, запускает `ml_pipeline.py`, сохраняет отчеты, логи и метрики как artifacts. |
 | `ml_pipeline.py` | Offline ML-пайплайн. Загружает датасет Iris, обучает `RandomForestClassifier`, считает accuracy и выводит результат. Используется в GitLab CI/CD и GitHub Actions для проверки воспроизводимого запуска модели. |
 | `app.py` | FastAPI ML-сервис, построенный на той же логике, что и `ml_pipeline.py`. Поддерживает endpoint’ы `/health`, `/metrics` и `/predict`. Используется для демонстрации деплоя двух версий модели. |
@@ -91,8 +91,6 @@ https://github.com/perceivery-mipt/hw7
 | `doc/architecture/decisions/0002-use-canary-deployment-for-ml-service.md` | Основной ADR проекта. В нем сравниваются Blue-Green и Canary Deployment, обосновывается выбор Canary Deployment и описываются риски выбранной стратегии. |
 | `.adr-dir` | Служебный файл `adr-tools`, в котором хранится путь к директории ADR-документов. |
 | `docs/screenshots/` | Директория со скриншотами проверок: успешный GitLab pipeline, запуск Docker Compose, работа endpoint’ов, Canary 90/10, 50/50, 100%, rollback и успешный GitHub Actions workflow. |
-| `notebooks/HW7_CICD_Freydina_Alena_1.ipynb` | Итоговый ноутбук с выполнением домашнего задания, выводами, скриншотами и результатами проверок. |
+| `notebooks/HW7_CICD_Freydina_Alena_2.ipynb` | Итоговый ноутбук с выполнением домашнего задания, выводами, скриншотами и результатами проверок. |
 | `.gitignore` | Исключает из Git служебные файлы Colab, Python-кэш, временные файлы, локальные директории и скачанный инструмент `adr-tools`. |
 | `README.md` | Основная документация проекта: описание пайплайна, стратегии деплоя, запуска сервиса, A/B-теста, ADR и CI/CD. |
-
-
