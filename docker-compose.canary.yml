@@ -1,0 +1,31 @@
+services:
+  stable:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ml_service_stable
+    environment:
+      - MODEL_VERSION=v1.0.0
+    expose:
+      - "8000"
+
+  canary:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ml_service_canary
+    environment:
+      - MODEL_VERSION=v1.1.0
+    expose:
+      - "8000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: ml_service_nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.active.conf:/etc/nginx/nginx.conf:ro # актив
+    depends_on:
+      - stable
+      - canary
